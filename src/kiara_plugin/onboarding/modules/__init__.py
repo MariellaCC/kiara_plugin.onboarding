@@ -21,6 +21,7 @@ class ZenodoDownloadConfig(KiaraModuleConfig):
 
 
 class ZenodoDownload(KiaraModule):
+    """Download a dataset from zenodo.org."""
 
     _module_type_name = "onboard.zenodo_record"
     _config_cls = ZenodoDownloadConfig
