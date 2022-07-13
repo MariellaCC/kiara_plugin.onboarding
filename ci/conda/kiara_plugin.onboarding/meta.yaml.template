@@ -24,8 +24,8 @@ requirements:
   run:
     - python
     - httpx>=0.23.0
-    - kiara>=0.4.4
-    - kiara_plugin.core_types>=0.4.2
+    - kiara>=0.4.17
+    - kiara_plugin.core_types>=0.4.10
     - pyzenodo3>=1.0.2
 about:
   home: https://github.com/DHARPA-Project/kiara_plugin.onboarding
