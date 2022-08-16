@@ -9,7 +9,7 @@ from kiara.data_types.included_core_types.filesystem import FileBundle
 from kiara.exceptions import KiaraProcessingException
 from kiara.models.module import KiaraModuleConfig
 from kiara.models.values.value import ValueMap
-from kiara.modules import KiaraModule, ValueSetSchema
+from kiara.modules import KiaraModule, ValueMapSchema
 from pydantic import Field
 
 
@@ -28,7 +28,7 @@ class ZenodoDownload(KiaraModule):
 
     def create_inputs_schema(
         self,
-    ) -> ValueSetSchema:
+    ) -> ValueMapSchema:
 
         metadata_filename = self.get_config_value("metadata_filename")
         return {
@@ -42,7 +42,7 @@ class ZenodoDownload(KiaraModule):
 
     def create_outputs_schema(
         self,
-    ) -> ValueSetSchema:
+    ) -> ValueMapSchema:
 
         return {
             "file_bundle": {
