@@ -44,7 +44,8 @@ dev_testing = [
     "kiara[dev_testing]",
     "types-setuptools",
     "sqlalchemy-stubs",
-    "types-orjson"
+    "types-orjson",
+    "types-pytz"
 ]
 dev_utils = [
     "kiara[dev_utils]"

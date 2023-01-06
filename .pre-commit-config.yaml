@@ -39,7 +39,7 @@ repos:
     files: "^src/"
     pass_filenames: true
     args: ["--config-file", "setup.cfg", "--ignore-missing-imports", "--explicit-package-bases"]
-    additional_dependencies: [pydantic>=1.8.0, rich>=10.0.0, ruamel.yaml, sqlalchemy-stubs, types-python-slugify, types-setuptools, types-python-dateutil]
+    additional_dependencies: [pydantic>=1.8.0, rich>=10.0.0, ruamel.yaml, sqlalchemy-stubs, types-python-slugify, types-setuptools, types-python-dateutil, types-pytz, types-orjson]
 
 - repo: https://github.com/Kludex/no-optional
   rev: 0.3.1
