@@ -33,6 +33,7 @@ dependencies = [
     "kiara>=0.4.24",
     "kiara_plugin.core_types>=0.4.13",
     "httpx>=0.23.0",
+    "patool",
     "pyzenodo3>=1.0.2"
 ]
 dynamic = ["version"]
