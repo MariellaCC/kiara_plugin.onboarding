@@ -10,14 +10,128 @@ from kiara.models.filesystem import FileBundle, FileModel
 from pydantic import Field
 
 
+class ImportFileConfig(KiaraModuleConfig):
+
+    import_metadata: bool = Field(
+        description="Whether to return the import metadata as well.",
+        default=True,
+    )
+
+
+class ImportFileModule(KiaraModule):
+    """A generic module to import a file from any local or remote location."""
+
+    _module_type_name = "import.file"
+    _config_cls = ImportFileConfig
+
+    def create_inputs_schema(
+        self,
+    ) -> ValueMapSchema:
+
+        result: Dict[str, Dict[str, Any]] = {
+            "uri": {
+                "type": "string",
+                "doc": "The uri (url/path/...) of the file to import.",
+            }
+        }
+        if self.get_config_value("import_metadata"):
+            result["import_metadata"] = {
+                "type": "dict",
+                "doc": "Metadata you want to attach to the file.",
+                "optional": True,
+            }
+
+        return result
+
+    def create_outputs_schema(
+        self,
+    ) -> ValueMapSchema:
+
+        result = {
+            "file": {
+                "type": "file",
+                "doc": "The imported file.",
+            }
+        }
+        if self.get_config_value("import_metadata"):
+            result["import_metadata"] = {
+                "type": "dict",
+                "doc": "Metadata about the import and file.",
+            }
+        return result
+
+    def process(self, inputs: ValueMap, outputs: ValueMap) -> None:
+        pass
+
+
+class ImportFileBundleConfig(KiaraModuleConfig):
+
+    import_metadata: bool = Field(
+        description="Whether to return the import metadata as well.",
+        default=True,
+    )
+
+
+class ImportFileBundleModule(KiaraModule):
+    """A generic module to import a file bundle from any local or remote location."""
+
+    _module_type_name = "import.file_bundle"
+    _config_cls = ImportFileBundleConfig
+
+    def create_inputs_schema(
+        self,
+    ) -> ValueMapSchema:
+
+        result: Dict[str, Dict[str, Any]] = {
+            "uri": {
+                "type": "string",
+                "doc": "The uri (url/path/...) of the file to import.",
+            }
+        }
+        if self.get_config_value("import_metadata"):
+            result["import_metadata"] = {
+                "type": "dict",
+                "doc": "Metadata you want to attach to the file bundle.",
+                "optional": True,
+            }
+
+        return result
+
+    def create_outputs_schema(
+        self,
+    ) -> ValueMapSchema:
+
+        result = {
+            "file_bundle": {
+                "type": "file_bundle",
+                "doc": "The imported file bundle.",
+            }
+        }
+        if self.get_config_value("import_metadata"):
+            result["import_metadata"] = {
+                "type": "dict",
+                "doc": "Metadata about the import and file bundle.",
+            }
+        return result
+
+    def process(self, inputs: ValueMap, outputs: ValueMap) -> None:
+        pass
+
+
 class DownloadFileConfig(KiaraModuleConfig):
     download_metadata: bool = Field(
-        description="Whether to return the download metadata as well. If 'None' user gets to choose.",
+        description="Whether to return the download metadata as well.",
         default=True,
     )
 
 
 class DownloadFileModule(KiaraModule):
+    """Download a single file from a remote location.
+
+    The result of this operation is a single value of type 'file' (basically an array of raw bytes), which can then be used in other modules to
+    create more meaningful data structures.
+    """
+
     _module_type_name = "download.file"
     _config_cls = DownloadFileConfig
 
