@@ -56,6 +56,22 @@ dev_all = [
     "kiara[dev_all]"
 ]
 
+[project.entry-points."kiara.plugin"]
+onboarding = "kiara_plugin.onboarding"
+
+[project.entry-points."kiara.data_types"]
+onboarding = "kiara_plugin.onboarding:find_data_types"
+
+[project.entry-points."kiara.model_classes"]
+onboarding = "kiara_plugin.onboarding:find_model_classes"
+
+[project.entry-points."kiara.modules"]
+onboarding = "kiara_plugin.onboarding:find_modules"
+
+[project.entry-points."kiara.pipelines"]
+onboarding = "kiara_plugin.onboarding:find_pipelines"
+
+
 [project.urls]
 homepage = "https://github.com/DHARPA-Project/kiara_plugin.onboarding"
 documentation = "https://DHARPA-Project.github.io/kiara_plugin.onboarding"
