@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import Any, Dict
 
-from kiara import KiaraModule, KiaraModuleConfig, ValueMap, ValueMapSchema
+from kiara.api import KiaraModule, KiaraModuleConfig, ValueMap, ValueMapSchema
 from pydantic import Field
 
 

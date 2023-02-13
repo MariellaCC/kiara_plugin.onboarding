@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 import orjson
-from kiara import KiaraModule, KiaraModuleConfig, ValueMap, ValueMapSchema
+from kiara.api import KiaraModule, KiaraModuleConfig, ValueMap, ValueMapSchema
 from kiara.exceptions import KiaraProcessingException
 from kiara.models.filesystem import FileBundle
 from pydantic import Field

@@ -5,7 +5,7 @@ import shutil
 import tempfile
 from typing import Any, Dict, Union
 
-from kiara import KiaraModule, KiaraModuleConfig, ValueMap, ValueMapSchema
+from kiara.api import KiaraModule, KiaraModuleConfig, ValueMap, ValueMapSchema
 from kiara.models.filesystem import FileBundle
 from pydantic import Field
 
