@@ -6,8 +6,8 @@ import tempfile
 from typing import Any, Dict, Union
 
 from kiara.api import KiaraModule, KiaraModuleConfig, ValueMap, ValueMapSchema
-from kiara.models.filesystem import FileBundle
 from kiara.exceptions import KiaraProcessingException
+from kiara.models.filesystem import FileBundle
 from pydantic import Field
 
 from kiara_plugin.onboarding.utils.download import download_file
@@ -112,10 +112,10 @@ class DownloadFileBundleModule(KiaraModule):
     def process(self, inputs: ValueMap, outputs: ValueMap):
 
         from datetime import datetime
+        from urllib.parse import urlparse
 
         import httpx
         import pytz
-        from urllib.parse import urlparse
 
         url = inputs.get_value_data("url")
         suffix = None
@@ -141,7 +141,6 @@ class DownloadFileBundleModule(KiaraModule):
                 for data in r.iter_bytes():
                     f.write(data)
 
-
         out_dir = tempfile.mkdtemp()
 
         def del_out_dir():
@@ -152,10 +151,11 @@ class DownloadFileBundleModule(KiaraModule):
         error = None
         try:
             shutil.unpack_archive(tmp_file.name, out_dir)
-        except Exception as e:
+        except Exception:
             # try patool, maybe we're lucky
             try:
                 import patoolib
+
                 patoolib.extract_archive(tmp_file.name, outdir=out_dir)
             except Exception as e:
                 error = e
