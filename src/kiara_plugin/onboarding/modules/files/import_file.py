@@ -2,10 +2,11 @@
 import os
 from typing import Any, Dict, Tuple
 
+from pydantic import BaseModel, Field
+
 from kiara.api import KiaraModule, KiaraModuleConfig, ValueMap, ValueMapSchema
 from kiara.exceptions import KiaraProcessingException
 from kiara.models.filesystem import FileModel
-from pydantic import BaseModel, Field
 
 
 class ImportFileConfig(KiaraModuleConfig):

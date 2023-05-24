@@ -5,11 +5,11 @@ import shutil
 import tempfile
 from typing import Any, Dict, Union
 
+from pydantic import Field
+
 from kiara.api import KiaraModule, KiaraModuleConfig, ValueMap, ValueMapSchema
 from kiara.exceptions import KiaraProcessingException
 from kiara.models.filesystem import FileBundle
-from pydantic import Field
-
 from kiara_plugin.onboarding.utils.download import download_file
 
 

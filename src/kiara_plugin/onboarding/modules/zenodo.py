@@ -5,10 +5,11 @@ from pathlib import Path
 from typing import Any, Mapping
 
 import orjson
+from pydantic import Field
+
 from kiara.api import KiaraModule, KiaraModuleConfig, ValueMap, ValueMapSchema
 from kiara.exceptions import KiaraProcessingException
 from kiara.models.filesystem import FileBundle
-from pydantic import Field
 
 
 class ZenodoDownloadConfig(KiaraModuleConfig):
@@ -63,7 +64,7 @@ class ZenodoDownload(KiaraModule):
                 f"Can't download file, target path already exists: {target_path.as_posix()}."
             )
 
-        hash_md5 = hashlib.md5()
+        hash_md5 = hashlib.md5()  # noqa
 
         with open(target_file, "ab") as file2:
             with httpx.Client() as client:
