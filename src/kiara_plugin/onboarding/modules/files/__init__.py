@@ -7,6 +7,7 @@ from typing import Any, Dict, Union
 
 from kiara.api import KiaraModule, KiaraModuleConfig, ValueMap, ValueMapSchema
 from kiara.models.filesystem import FileBundle
+from kiara.exceptions import KiaraProcessingException
 from pydantic import Field
 
 from kiara_plugin.onboarding.utils.download import download_file
@@ -114,10 +115,20 @@ class DownloadFileBundleModule(KiaraModule):
 
         import httpx
         import pytz
+        from urllib.parse import urlparse
 
         url = inputs.get_value_data("url")
+        suffix = None
+        try:
+            parsed_url = urlparse(url)
+            _, suffix = os.path.splitext(parsed_url.path)
+        except Exception:
+            pass
+        if not suffix:
+            suffix = ""
+
         sub_path: Union[None, str] = inputs.get_value_data("sub_path")
-        tmp_file = tempfile.NamedTemporaryFile(delete=False)
+        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
         atexit.register(tmp_file.close)
 
         history = []
@@ -130,16 +141,27 @@ class DownloadFileBundleModule(KiaraModule):
                 for data in r.iter_bytes():
                     f.write(data)
 
-        import patoolib
 
         out_dir = tempfile.mkdtemp()
 
         def del_out_dir():
             shutil.rmtree(out_dir, ignore_errors=True)
 
-        # atexit.register(del_out_dir)
+        atexit.register(del_out_dir)
 
-        patoolib.extract_archive(tmp_file.name, outdir=out_dir)
+        error = None
+        try:
+            shutil.unpack_archive(tmp_file.name, out_dir)
+        except Exception as e:
+            # try patool, maybe we're lucky
+            try:
+                import patoolib
+                patoolib.extract_archive(tmp_file.name, outdir=out_dir)
+            except Exception as e:
+                error = e
+
+        if error is not None:
+            raise KiaraProcessingException(f"Could not extract archive: {error}.")
 
         path = out_dir
         if sub_path:
