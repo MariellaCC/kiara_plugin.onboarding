@@ -1,0 +1,3 @@
+operation: "${this_dir}/../pipelines/example_pipeline_onboarding.yaml"
+inputs:
+  name: "beautiful world"
