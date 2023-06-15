@@ -1,2 +1,0 @@
-greeting::data: "Hello beautiful world!"
-greeting::properties::metadata.python_class::python_class::python_class_name: "str"
