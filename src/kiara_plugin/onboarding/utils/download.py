@@ -1,17 +1,26 @@
 # -*- coding: utf-8 -*-
 import tempfile
 from datetime import datetime
-from typing import Any, Dict, Tuple, Union
+from typing import Dict, List, Union
 
 import httpx
 import pytz
+from pydantic import BaseModel, Field
 
 from kiara.models.filesystem import FileModel
 
 
+class DownloadMetadata(BaseModel):
+    url: str = Field(description="The url of the download request.")
+    response_headers: List[Dict[str, str]] = Field(
+        description="The response headers of the download request."
+    )
+    request_time: str = Field(description="The time the request was made.")
+
+
 def download_file(
-    url: str, file_name: Union[str, None] = None
-) -> Tuple[FileModel, Dict[str, Any]]:
+    url: str, file_name: Union[str, None] = None, attach_metadata: bool = True
+) -> FileModel:
 
     tmp_file = tempfile.NamedTemporaryFile(delete=False)
 
@@ -31,8 +40,14 @@ def download_file(
 
     result_file = FileModel.load_file(tmp_file.name, file_name)
 
-    metadata = {
-        "response_headers": history,
-        "request_time": datetime.utcnow().replace(tzinfo=pytz.utc).isoformat(),
-    }
-    return result_file, metadata
+    if attach_metadata:
+        metadata = {
+            "url": url,
+            "response_headers": history,
+            "request_time": datetime.utcnow().replace(tzinfo=pytz.utc).isoformat(),
+        }
+        _metadata = DownloadMetadata(**metadata)
+        result_file.metadata = _metadata.dict()
+        result_file.metadata_schema = DownloadMetadata.schema_json()
+
+    return result_file
