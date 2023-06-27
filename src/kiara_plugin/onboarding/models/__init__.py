@@ -14,7 +14,7 @@ from typing import List, Tuple, Union
 
 from kiara.exceptions import KiaraException
 from kiara.models import KiaraModel
-from kiara.models.filesystem import FileBundle, FileModel, FolderImportConfig
+from kiara.models.filesystem import FolderImportConfig, KiaraFile, KiaraFileBundle
 
 
 class OnboardDataModel(KiaraModel):
@@ -37,12 +37,12 @@ class OnboardDataModel(KiaraModel):
     @abstractmethod
     def retrieve(
         self, uri: str, file_name: Union[None, str], attach_metadata: bool
-    ) -> FileModel:
+    ) -> KiaraFile:
         pass
 
     def retrieve_bundle(
         self, uri: str, import_config: FolderImportConfig, attach_metadata: bool
-    ) -> FileBundle:
+    ) -> KiaraFileBundle:
         raise NotImplementedError()
 
 
@@ -68,7 +68,7 @@ class FileFromLocalModel(OnboardDataModel):
 
     def retrieve(
         self, uri: str, file_name: Union[None, str], attach_metadata: bool
-    ) -> FileModel:
+    ) -> KiaraFile:
 
         if not os.path.exists(os.path.abspath(uri)):
             raise KiaraException(
@@ -79,11 +79,11 @@ class FileFromLocalModel(OnboardDataModel):
                 f"Can't create file from path '{uri}': path is not a file."
             )
 
-        return FileModel.load_file(uri)
+        return KiaraFile.load_file(uri)
 
     def retrieve_bundle(
         self, uri: str, import_config: FolderImportConfig, attach_metadata: bool
-    ) -> FileBundle:
+    ) -> KiaraFileBundle:
 
         if not os.path.exists(os.path.abspath(uri)):
             raise KiaraException(
@@ -94,7 +94,7 @@ class FileFromLocalModel(OnboardDataModel):
                 f"Can't create file from path '{uri}': path is not a directory."
             )
 
-        return FileBundle.import_folder(source=uri, import_config=import_config)
+        return KiaraFileBundle.import_folder(source=uri, import_config=import_config)
 
 
 class FileFromRemoteModel(OnboardDataModel):
@@ -113,17 +113,17 @@ class FileFromRemoteModel(OnboardDataModel):
 
     def retrieve(
         self, uri: str, file_name: Union[None, str], attach_metadata: bool
-    ) -> FileModel:
+    ) -> KiaraFile:
         from kiara_plugin.onboarding.utils.download import download_file
 
-        result_file: FileModel = download_file(  # type: ignore
+        result_file: KiaraFile = download_file(  # type: ignore
             url=uri, file_name=file_name, attach_metadata=attach_metadata
         )
         return result_file
 
     def retrieve_bundle(
         self, uri: str, import_config: FolderImportConfig, attach_metadata: bool
-    ) -> FileBundle:
+    ) -> KiaraFileBundle:
         from kiara_plugin.onboarding.utils.download import download_file_bundle
 
         result_bundle = download_file_bundle(
@@ -149,7 +149,7 @@ class FileFromZenodoModel(OnboardDataModel):
 
     def retrieve(
         self, uri: str, file_name: Union[None, str], attach_metadata: bool
-    ) -> FileModel:
+    ) -> KiaraFile:
 
         import pyzenodo3
 
@@ -197,7 +197,7 @@ class FileFromZenodoModel(OnboardDataModel):
 
         file_name = file_path.split("/")[-1]
 
-        file_model: FileModel
+        file_model: KiaraFile
         file_model, md5_digest = download_file(  # type: ignore
             url=url,
             target=None,
@@ -218,7 +218,7 @@ class FileFromZenodoModel(OnboardDataModel):
 
     def retrieve_bundle(
         self, uri: str, import_config: FolderImportConfig, attach_metadata: bool
-    ) -> FileBundle:
+    ) -> KiaraFileBundle:
 
         import shutil
 
@@ -254,7 +254,7 @@ class FileFromZenodoModel(OnboardDataModel):
 
             record = zen.find_record_by_doi(_doi)
 
-            path = FileBundle.create_tmp_dir()
+            path = KiaraFileBundle.create_tmp_dir()
             shutil.rmtree(path, ignore_errors=True)
             path.mkdir()
 
@@ -264,7 +264,7 @@ class FileFromZenodoModel(OnboardDataModel):
                 checksum = file_data["checksum"][4:]
 
                 target = os.path.join(path, file_name)
-                file_model: FileModel
+                file_model: KiaraFile
                 file_model, md5_digest = download_file(  # type: ignore
                     url=url,
                     target=target,
@@ -278,7 +278,7 @@ class FileFromZenodoModel(OnboardDataModel):
                         msg=f"Can't download file '{file_name}', invalid checksum: {checksum} != {md5_digest}"
                     )
 
-            bundle = FileBundle.import_folder(path.as_posix())
+            bundle = KiaraFileBundle.import_folder(path.as_posix())
             if attach_metadata:
                 bundle.metadata["zenodo_record_data"] = record.data
 
@@ -319,7 +319,7 @@ class FileFromZenodoModel(OnboardDataModel):
                     msg=f"Can't download file '{file_name}', invalid checksum: {checksum} != {md5_digest}"
                 )
 
-            bundle = FileBundle.from_archive_file(
+            bundle = KiaraFileBundle.from_archive_file(
                 archive_file=file_model, import_config=import_config
             )
             if attach_metadata:

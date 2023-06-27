@@ -9,7 +9,7 @@ from typing import Dict, List, Tuple, Union
 from pydantic import BaseModel, Field
 
 from kiara.exceptions import KiaraException
-from kiara.models.filesystem import FileBundle, FileModel, FolderImportConfig
+from kiara.models.filesystem import FolderImportConfig, KiaraFile, KiaraFileBundle
 
 
 class DownloadMetadata(BaseModel):
@@ -32,7 +32,7 @@ def download_file(
     file_name: Union[str, None] = None,
     attach_metadata: bool = True,
     return_md5_hash: bool = False,
-) -> Union[FileModel, Tuple[FileModel, str]]:
+) -> Union[KiaraFile, Tuple[KiaraFile, str]]:
 
     import hashlib
 
@@ -65,7 +65,7 @@ def download_file(
         # TODO: make this smarter, using content-disposition headers if available
         file_name = url.split("/")[-1]
 
-    result_file = FileModel.load_file(_target.as_posix(), file_name)
+    result_file = KiaraFile.load_file(_target.as_posix(), file_name)
 
     if attach_metadata:
         metadata = {
@@ -87,7 +87,7 @@ def download_file_bundle(
     url: str,
     attach_metadata: bool = True,
     import_config: Union[FolderImportConfig, None] = None,
-) -> FileBundle:
+) -> KiaraFileBundle:
 
     import shutil
     from datetime import datetime
@@ -140,7 +140,7 @@ def download_file_bundle(
     if error is not None:
         raise KiaraException(msg=f"Could not extract archive: {error}.")
 
-    bundle = FileBundle.import_folder(out_dir, import_config=import_config)
+    bundle = KiaraFileBundle.import_folder(out_dir, import_config=import_config)
 
     if import_config is None:
         ic_dict = {}

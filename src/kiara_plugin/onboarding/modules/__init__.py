@@ -5,7 +5,7 @@ from typing import List, Mapping, Tuple, Type, Union
 from pydantic import Field
 
 from kiara.exceptions import KiaraException, KiaraProcessingException
-from kiara.models.filesystem import FileBundle, FileModel, FolderImportConfig
+from kiara.models.filesystem import FolderImportConfig, KiaraFile, KiaraFileBundle
 from kiara.models.module import KiaraModuleConfig
 from kiara.models.values.value import ValueMap
 from kiara.modules import KiaraModule, ValueMapSchema
@@ -190,8 +190,8 @@ class OnboardFileModule(KiaraModule):
             raise KiaraProcessingException(msg=f"Can't onboard file from '{source}' using onboard type '{model_cls._kiara_model_id}': no result data retrieved. This is most likely a bug.")  # type: ignore
 
         if isinstance(result, str):
-            data = FileModel.load_file(result, file_name=file_name)
-        elif not isinstance(result, FileModel):
+            data = KiaraFile.load_file(result, file_name=file_name)
+        elif not isinstance(result, KiaraFile):
             raise KiaraProcessingException(
                 "Can't onboard file: onboard model returned data that is not a file. This is most likely a bug."
             )
@@ -406,7 +406,7 @@ class OnboardFileBundleModule(KiaraModule):
             attach_metadata = inputs.get_value_data("attach_metadata")
 
         try:
-            result: Union[None, FileBundle] = model.retrieve_bundle(
+            result: Union[None, KiaraFileBundle] = model.retrieve_bundle(
                 uri=source, import_config=import_config, attach_metadata=attach_metadata
             )
 
@@ -414,7 +414,7 @@ class OnboardFileBundleModule(KiaraModule):
                 raise KiaraProcessingException(msg=f"Can't onboard file bundle from '{source}' using onboard type '{model_cls._kiara_model_id}': no result data retrieved. This is most likely a bug.")  # type: ignore
 
             if isinstance(result, str):
-                result = FileBundle.import_folder(source=result)
+                result = KiaraFileBundle.import_folder(source=result)
 
         except NotImplementedError:
             result = None
@@ -427,15 +427,15 @@ class OnboardFileBundleModule(KiaraModule):
                 raise KiaraProcessingException(msg=f"Can't onboard file bundle from '{source}' using onboard type '{model_cls._kiara_model_id}': no result data retrieved. This is most likely a bug.")  # type: ignore
 
             if isinstance(result, str):
-                imported_bundle_file = FileModel.load_file(result_file)  # type: ignore
-            elif not isinstance(result_file, FileModel):
+                imported_bundle_file = KiaraFile.load_file(result_file)  # type: ignore
+            elif not isinstance(result_file, KiaraFile):
                 raise KiaraProcessingException(
                     "Can't onboard file: onboard model returned data that is not a file. This is most likely a bug."
                 )
             else:
                 imported_bundle_file = result_file
 
-            imported_bundle = FileBundle.from_archive_file(
+            imported_bundle = KiaraFileBundle.from_archive_file(
                 imported_bundle_file, import_config=import_config
             )
         else:

@@ -9,7 +9,7 @@ from pydantic import Field
 
 from kiara.api import KiaraModule, KiaraModuleConfig, ValueMap, ValueMapSchema
 from kiara.exceptions import KiaraProcessingException
-from kiara.models.filesystem import FileBundle
+from kiara.models.filesystem import KiaraFileBundle
 
 
 class ZenodoDownloadConfig(KiaraModuleConfig):
@@ -91,7 +91,7 @@ class ZenodoDownload(KiaraModule):
 
         record = zen.find_record_by_doi(doi)
 
-        path = FileBundle.create_tmp_dir()
+        path = KiaraFileBundle.create_tmp_dir()
         shutil.rmtree(path, ignore_errors=True)
         path.mkdir()
         for file_data in record.data["files"]:
@@ -102,5 +102,5 @@ class ZenodoDownload(KiaraModule):
             metadata_file = path / metadata_filename
             metadata_file.write_bytes(orjson.dumps(record.data))
 
-        bundle = FileBundle.import_folder(path.as_posix())
+        bundle = KiaraFileBundle.import_folder(path.as_posix())
         outputs.set_value("file_bundle", bundle)
