@@ -30,8 +30,8 @@ classifiers = [
     "Programming Language :: Python :: 3.11"
 ]
 dependencies = [
-    "kiara>=0.4.40",
-    "kiara_plugin.core_types>=0.4.18",
+    "kiara>=0.4.44",
+    "kiara_plugin.core_types>=0.4.20",
     "httpx>=0.23.0",
     "pyzenodo3>=1.0.2",
     "PyGithub>=1.59.0",
