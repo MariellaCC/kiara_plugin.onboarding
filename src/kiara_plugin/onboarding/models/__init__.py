@@ -116,7 +116,7 @@ class FileFromRemoteModel(OnboardDataModel):
     ) -> FileModel:
         from kiara_plugin.onboarding.utils.download import download_file
 
-        result_file = download_file(
+        result_file: FileModel = download_file(  # type: ignore
             url=uri, file_name=file_name, attach_metadata=attach_metadata
         )
         return result_file
@@ -197,7 +197,8 @@ class FileFromZenodoModel(OnboardDataModel):
 
         file_name = file_path.split("/")[-1]
 
-        file_model, md5_digest = download_file(
+        file_model: FileModel
+        file_model, md5_digest = download_file(  # type: ignore
             url=url,
             target=None,
             file_name=file_name,
@@ -263,7 +264,8 @@ class FileFromZenodoModel(OnboardDataModel):
                 checksum = file_data["checksum"][4:]
 
                 target = os.path.join(path, file_name)
-                file_model, md5_digest = download_file(
+                file_model: FileModel
+                file_model, md5_digest = download_file(  # type: ignore
                     url=url,
                     target=target,
                     file_name=file_name,
@@ -304,7 +306,7 @@ class FileFromZenodoModel(OnboardDataModel):
 
             file_name = file_path.split("/")[-1]
 
-            file_model, md5_digest = download_file(
+            file_model, md5_digest = download_file(  # type: ignore
                 url=url,
                 target=None,
                 file_name=file_name,

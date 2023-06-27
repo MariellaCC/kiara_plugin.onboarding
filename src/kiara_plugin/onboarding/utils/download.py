@@ -65,7 +65,7 @@ def download_file(
         # TODO: make this smarter, using content-disposition headers if available
         file_name = url.split("/")[-1]
 
-    result_file = FileModel.load_file(_target, file_name)
+    result_file = FileModel.load_file(_target.as_posix(), file_name)
 
     if attach_metadata:
         metadata = {
