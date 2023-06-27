@@ -3,13 +3,15 @@ import atexit
 import os
 import tempfile
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Mapping, Tuple, Type, Union
 
 from pydantic import BaseModel, Field
 
 from kiara.exceptions import KiaraException
 from kiara.models.filesystem import FolderImportConfig, KiaraFile, KiaraFileBundle
+from kiara_plugin.onboarding.models import OnboardDataModel
 
 
 class DownloadMetadata(BaseModel):
@@ -24,6 +26,21 @@ class DownloadBundleMetadata(DownloadMetadata):
     import_config: FolderImportConfig = Field(
         description="The import configuration that was used to import the files from the source bundle."
     )
+
+
+@lru_cache()
+def get_onboard_model_cls(
+    onboard_type: Union[str, None]
+) -> Union[None, Type[OnboardDataModel]]:
+
+    if not onboard_type:
+        return None
+
+    from kiara.registries.models import ModelRegistry
+
+    model_registry = ModelRegistry.instance()
+    model_cls = model_registry.get_model_cls(onboard_type, OnboardDataModel)
+    return model_cls  # type: ignore
 
 
 def download_file(
@@ -160,3 +177,169 @@ def download_file_bundle(
         bundle.metadata_schemas["download_info"] = DownloadMetadata.schema_json()
 
     return bundle
+
+
+def find_matching_onboard_models(
+    uri: str, for_bundle: bool = False
+) -> Mapping[Type[OnboardDataModel], Tuple[bool, str]]:
+
+    from kiara.registries.models import ModelRegistry
+
+    model_registry = ModelRegistry.instance()
+    onboard_models = model_registry.get_models_of_type(
+        OnboardDataModel
+    ).item_infos.values()
+
+    result = {}
+    onboard_model: Type[OnboardDataModel]
+    for onboard_model in onboard_models:  # type: ignore
+
+        python_cls: Type[OnboardDataModel] = onboard_model.python_class.get_class()  # type: ignore
+        if for_bundle:
+            result[python_cls] = python_cls.accepts_bundle_uri(uri)
+        else:
+            result[python_cls] = python_cls.accepts_uri(uri)
+
+    return result
+
+
+def onboard_file(
+    source: str,
+    file_name: Union[str, None] = None,
+    onboard_type: Union[str, None] = None,
+    attach_metadata: bool = True,
+) -> KiaraFile:
+
+    if not onboard_type:
+
+        model_clsses = find_matching_onboard_models(source)
+        matches = [k for k, v in model_clsses.items() if v[0]]
+        if not matches:
+            raise KiaraException(
+                msg=f"Can't onboard file from '{source}': no onboard models found that accept this source type."
+            )
+        elif len(matches) > 1:
+            msg = "Valid onboarding types for this uri:\n\n"
+            for k, v in model_clsses.items():
+                if not v[0]:
+                    continue
+                msg += f"  - {k._kiara_model_id}: {v[1]}\n"
+            raise KiaraException(
+                msg=f"Can't onboard file from '{source}': multiple onboard models found that accept this source type.\n\n{msg}"
+            )
+
+        model_cls: Type[OnboardDataModel] = matches[0]
+
+    else:
+
+        model_cls = get_onboard_model_cls(onboard_type=onboard_type)  # type: ignore
+        if not model_cls:
+            raise KiaraException(msg=f"Can't onboard file from '{source}' using onboard type '{onboard_type}': no onboard model found with this name.")  # type: ignore
+
+        valid, msg = model_cls.accepts_uri(source)
+        if not valid:
+            raise KiaraException(msg=f"Can't onboard file from '{source}' using onboard type '{model_cls._kiara_model_id}': {msg}")  # type: ignore
+
+    if not model_cls.get_config_fields():
+        model = model_cls()
+    else:
+        raise NotImplementedError()
+
+    result = model.retrieve(
+        uri=source, file_name=file_name, attach_metadata=attach_metadata
+    )
+    if not result:
+        raise KiaraException(msg=f"Can't onboard file from '{source}' using onboard type '{model_cls._kiara_model_id}': no result data retrieved. This is most likely a bug.")  # type: ignore
+
+    if isinstance(result, str):
+        data = KiaraFile.load_file(result, file_name=file_name)
+    elif not isinstance(result, KiaraFile):
+        raise KiaraException(
+            "Can't onboard file: onboard model returned data that is not a file. This is most likely a bug."
+        )
+    else:
+        data = result
+
+    return data
+
+
+def onboard_file_bundle(
+    source: str,
+    import_config: Union[FolderImportConfig, None],
+    onboard_type: Union[str, None] = None,
+    attach_metadata: bool = True,
+) -> KiaraFileBundle:
+
+    if not onboard_type:
+
+        model_clsses = find_matching_onboard_models(uri=source, for_bundle=True)
+        matches = [k for k, v in model_clsses.items() if v[0]]
+        if not matches:
+            raise KiaraException(
+                msg=f"Can't onboard file from '{source}': no onboard models found that accept this source type."
+            )
+        elif len(matches) > 1:
+            msg = "Valid onboarding types for this uri:\n\n"
+            for k, v in model_clsses.items():
+                if not v[0]:
+                    continue
+                msg += f"  - {k._kiara_model_id}: {v[1]}\n"
+            raise KiaraException(
+                msg=f"Can't onboard file from '{source}': multiple onboard models found that accept this source type.\n\n{msg}"
+            )
+
+        model_cls: Type[OnboardDataModel] = matches[0]
+
+    else:
+        model_cls = get_onboard_model_cls(onboard_type=onboard_type)  # type: ignore
+        if not model_cls:
+            raise KiaraException(msg=f"Can't onboard file from '{source}' using onboard type '{onboard_type}': no onboard model found with this name.")  # type: ignore
+        valid, msg = model_cls.accepts_bundle_uri(source)
+        if not valid:
+            raise KiaraException(msg=f"Can't onboard file from '{source}' using onboard type '{model_cls._kiara_model_id}': {msg}")  # type: ignore
+
+    if not model_cls.get_config_fields():
+        model = model_cls()
+    else:
+        raise NotImplementedError()
+
+    if not import_config:
+        import_config = FolderImportConfig()
+
+    try:
+        result: Union[None, KiaraFileBundle] = model.retrieve_bundle(
+            uri=source, import_config=import_config, attach_metadata=attach_metadata
+        )
+
+        if not result:
+            raise KiaraException(msg=f"Can't onboard file bundle from '{source}' using onboard type '{model_cls._kiara_model_id}': no result data retrieved. This is most likely a bug.")  # type: ignore
+
+        if isinstance(result, str):
+            result = KiaraFileBundle.import_folder(source=result)
+
+    except NotImplementedError:
+        result = None
+
+    if not result:
+        result_file = model.retrieve(
+            uri=source, file_name=None, attach_metadata=attach_metadata
+        )
+        if not result_file:
+            raise KiaraException(msg=f"Can't onboard file bundle from '{source}' using onboard type '{model_cls._kiara_model_id}': no result data retrieved. This is most likely a bug.")  # type: ignore
+
+        if isinstance(result, str):
+            imported_bundle_file = KiaraFile.load_file(result_file)  # type: ignore
+        elif not isinstance(result_file, KiaraFile):
+            raise KiaraException(
+                "Can't onboard file: onboard model returned data that is not a file. This is most likely a bug."
+            )
+        else:
+            imported_bundle_file = result_file
+
+        imported_bundle = KiaraFileBundle.from_archive_file(
+            imported_bundle_file, import_config=import_config
+        )
+    else:
+        imported_bundle = result
+
+    return imported_bundle
