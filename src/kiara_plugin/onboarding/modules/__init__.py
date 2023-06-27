@@ -145,11 +145,15 @@ class OnboardFileBundleConfig(KiaraModuleConfig):
         description="Whether to attach onboarding metadata.", default=None
     )
     sub_path: Union[None, str] = Field(description="The sub path to use.", default=None)
-    include_file_types: Union[None, List[str]] = Field(
+    include_files: Union[None, List[str]] = Field(
         description="File types to include.", default=None
     )
-    exclude_file_types: Union[None, List[str]] = Field(
+    exclude_files: Union[None, List[str]] = Field(
         description="File types to include.", default=None
+    )
+    exclude_dirs: Union[None, List[str]] = Field(
+        description="Exclude directories that end with one of those tokens.",
+        default=None,
     )
 
 
@@ -183,17 +187,23 @@ class OnboardFileBundleModule(KiaraModule):
                 "doc": "The sub path to use. If not specified, the root of the source folder will be used.",
                 "optional": True,
             }
-        if self.get_config_value("include_file_types") is None:
-            result["include_file_types"] = {
+        if self.get_config_value("include_files") is None:
+            result["include_files"] = {
                 "type": "list",
-                "doc": "A list of file extensions to include. If not specified, all file extensions are included.",
+                "doc": "Include files that end with one of those tokens. If not specified, all file extensions are included.",
                 "optional": True,
             }
 
-        if self.get_config_value("exclude_file_types") is None:
-            result["exclude_file_types"] = {
+        if self.get_config_value("exclude_files") is None:
+            result["exclude_files"] = {
                 "type": "list",
-                "doc": "A list of file extensions to exclude. If not specified, no file extensions are excluded.",
+                "doc": "Exclude files that end with one of those tokens. If not specified, no file extensions are excluded.",
+                "optional": True,
+            }
+        if self.get_config_value("exclude_dirs") is None:
+            result["exclude_dirs"] = {
+                "type": "list",
+                "doc": "Exclude directories that end with one of those tokens. If not specified, no directories are excluded.",
                 "optional": True,
             }
 
@@ -265,16 +275,33 @@ class OnboardFileBundleModule(KiaraModule):
         if sub_path is None:
             sub_path = inputs.get_value_data("sub_path")
 
-        include = self.get_config_value("include_file_types")
+        include = self.get_config_value("include_files")
         if include is None:
-            include = inputs.get_value_data("include_file_types")
-        exclude = self.get_config_value("exclude_file_types")
+            _include = inputs.get_value_data("include_files")
+            if _include:
+                include = _include.list_data
+        exclude = self.get_config_value("exclude_files")
         if exclude is None:
-            exclude = inputs.get_value_data("exclude_file_types")
+            _exclude = inputs.get_value_data("exclude_files")
+            if _exclude:
+                exclude = _exclude.list_data
+        exclude_dirs = self.get_config_value("exclude_dirs")
+        if exclude_dirs is None:
+            _exclude_dirs = inputs.get_value_data("exclude_dirs")
+            if _exclude_dirs:
+                exclude_dirs = _exclude_dirs.list_data
 
-        import_config = FolderImportConfig(
-            sub_path=sub_path, include_files=include, exclude_files=exclude
-        )
+        import_config_data = {
+            "sub_path": sub_path,
+        }
+        if include:
+            import_config_data["include_files"] = include
+        if exclude:
+            import_config_data["exclude_files"] = exclude
+        if exclude_dirs:
+            import_config_data["exclude_dirs"] = exclude_dirs
+
+        import_config = FolderImportConfig(**import_config_data)
         attach_metadata = self.get_config_value("attach_metadata")
         if attach_metadata is None:
             attach_metadata = inputs.get_value_data("attach_metadata")

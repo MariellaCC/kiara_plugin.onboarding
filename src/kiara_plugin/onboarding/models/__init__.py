@@ -378,7 +378,10 @@ class FileFromGithubModel(OnboardDataModel):
 
         archive_zip: KiaraFile
         archive_zip = download_file(  # type: ignore
-            url=url, attach_metadata=attach_metadata, return_md5_hash=False
+            url=url,
+            attach_metadata=attach_metadata,
+            file_name=f"{tokens[1]}-{tokens[2]}.zip",
+            return_md5_hash=False,
         )
 
         base_sub_path = f"{tokens[1]}-{tokens[2]}"
