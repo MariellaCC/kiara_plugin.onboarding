@@ -326,3 +326,76 @@ class FileFromZenodoModel(OnboardDataModel):
                 bundle.metadata["zenodo_record_data"] = record.data
 
         return bundle
+
+
+class FileFromGithubModel(OnboardDataModel):
+
+    _kiara_model_id: str = "onboarding.file.from.github"
+
+    @classmethod
+    def accepts_uri(cls, uri: str) -> Tuple[bool, str]:
+
+        if uri.startswith("gh:") or uri.startswith("github:"):
+            return True, "uri is a github uri"
+
+        return False, "uri is not a github uri, must start with 'gh:' or 'github:'"
+
+    def retrieve(
+        self, uri: str, file_name: Union[None, str], attach_metadata: bool
+    ) -> KiaraFile:
+        from kiara_plugin.onboarding.utils.download import download_file
+
+        tokens = uri.split(":")[1].split("/", maxsplit=3)
+        if len(tokens) != 4:
+            raise KiaraException(
+                msg=f"Can't parse github uri '{uri}' for single file download. Required format: 'gh:<user>/<repo>/<branch_or_tag>/<path>'"
+            )
+
+        url = f"https://raw.githubusercontent.com/{tokens[0]}/{tokens[1]}/{tokens[2]}/{tokens[3]}"
+
+        result_file: KiaraFile = download_file(  # type: ignore
+            url=url, attach_metadata=attach_metadata
+        )
+        return result_file
+
+    def retrieve_bundle(
+        self, uri: str, import_config: FolderImportConfig, attach_metadata: bool
+    ) -> KiaraFileBundle:
+
+        from kiara_plugin.onboarding.utils.download import download_file
+
+        tokens = uri.split(":")[1].split("/", maxsplit=3)
+        if len(tokens) == 3:
+            sub_path = None
+        elif len(tokens) != 4:
+            raise KiaraException(
+                msg=f"Can't parse github uri '{uri}' for single file download. Required format: 'gh:<user>/<repo>/<branch_or_tag>/<path>'"
+            )
+        else:
+            sub_path = tokens[3]
+
+        url = f"https://github.com/{tokens[0]}/{tokens[1]}/archive/refs/heads/{tokens[2]}.zip"
+
+        archive_zip = download_file(
+            url=url, attach_metadata=attach_metadata, return_md5_hash=False
+        )
+
+        base_sub_path = f"{tokens[1]}-{tokens[2]}"
+
+        if sub_path:
+            if import_config.sub_path:
+                new_sub_path = "/".join([base_sub_path, sub_path, import_config.sub_path])  # type: ignore
+            else:
+                new_sub_path = "/".join([base_sub_path, sub_path])
+        elif import_config.sub_path:
+            new_sub_path = "/".join([base_sub_path, import_config.sub_path])
+        else:
+            new_sub_path = base_sub_path
+
+        import_config_new = import_config.copy(update={"sub_path": new_sub_path})
+
+        result_bundle = KiaraFileBundle.from_archive_file(
+            archive_file=archive_zip, import_config=import_config_new
+        )
+
+        return result_bundle
