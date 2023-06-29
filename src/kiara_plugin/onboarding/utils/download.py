@@ -70,7 +70,7 @@ def download_file(
     datetime.utcnow().replace(tzinfo=pytz.utc)
     with open(_target, "wb") as f:
         with httpx.stream("GET", url, follow_redirects=True) as r:
-            if r.status_code <= 200 or r.status_code >= 399:
+            if r.status_code < 200 or r.status_code >= 399:
                 raise KiaraException(
                     f"Could not download file from {url}: status code {r.status_code}."
                 )
