@@ -328,6 +328,18 @@ class FileFromZenodoModel(OnboardDataModel):
         return bundle
 
 
+class FileFromZoteroModel(OnboardDataModel):
+
+    _kiara_model_id = "onboarding.file.from.zotero"
+
+    @classmethod
+    def accepts_uri(cls, uri: str) -> Tuple[bool, str]:
+        if uri.startswith("zotero:"):
+            return True, "uri is a zotero uri"
+        else:
+            return False, "uri is not a zotero uri, must start with 'zotero:'"
+
+
 class FileFromGithubModel(OnboardDataModel):
 
     _kiara_model_id: str = "onboarding.file.from.github"
@@ -375,12 +387,13 @@ class FileFromGithubModel(OnboardDataModel):
             sub_path = tokens[3]
 
         url = f"https://github.com/{tokens[0]}/{tokens[1]}/archive/refs/heads/{tokens[2]}.zip"
+        file_name = f"{tokens[1]}-{tokens[2]}.zip"
 
         archive_zip: KiaraFile
         archive_zip = download_file(  # type: ignore
             url=url,
             attach_metadata=attach_metadata,
-            file_name=f"{tokens[1]}-{tokens[2]}.zip",
+            file_name=file_name,
             return_md5_hash=False,
         )
 

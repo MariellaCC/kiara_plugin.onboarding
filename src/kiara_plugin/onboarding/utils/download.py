@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from kiara.exceptions import KiaraException
 from kiara.models.filesystem import FolderImportConfig, KiaraFile, KiaraFileBundle
+from kiara.utils.files import unpack_archive
 from kiara_plugin.onboarding.models import OnboardDataModel
 
 
@@ -56,8 +57,18 @@ def download_file(
     import httpx
     import pytz
 
+    if not file_name:
+        # TODO: make this smarter, using content-disposition headers if available
+        file_name = url.split("/")[-1]
+
     if not target:
-        tmp_file = tempfile.NamedTemporaryFile(delete=False)
+        tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=file_name)
+
+        def rm_tmp_file():
+            os.unlink(tmp_file.name)
+
+        atexit.register(rm_tmp_file)
+
         _target = Path(tmp_file.name)
     else:
         _target = Path(target)
@@ -81,10 +92,6 @@ def download_file(
                 if return_md5_hash:
                     hash_md5.update(data)
                 f.write(data)
-
-    if not file_name:
-        # TODO: make this smarter, using content-disposition headers if available
-        file_name = url.split("/")[-1]
 
     result_file = KiaraFile.load_file(_target.as_posix(), file_name)
 
@@ -146,21 +153,22 @@ def download_file_bundle(
 
     atexit.register(del_out_dir)
 
-    error = None
-    try:
-        shutil.unpack_archive(tmp_file.name, out_dir)
-    except Exception:
-        # try patool, maybe we're lucky
-        try:
-            import patoolib
+    # error = None
+    # try:
+    #     shutil.unpack_archive(tmp_file.name, out_dir)
+    # except Exception:
+    #     # try patool, maybe we're lucky
+    #     try:
+    #         import patoolib
+    #
+    #         patoolib.extract_archive(tmp_file.name, outdir=out_dir)
+    #     except Exception as e:
+    #         error = e
+    #
+    # if error is not None:
+    #     raise KiaraException(msg=f"Could not extract archive: {error}.")
 
-            patoolib.extract_archive(tmp_file.name, outdir=out_dir)
-        except Exception as e:
-            error = e
-
-    if error is not None:
-        raise KiaraException(msg=f"Could not extract archive: {error}.")
-
+    unpack_archive(tmp_file.name, out_dir)
     bundle = KiaraFileBundle.import_folder(out_dir, import_config=import_config)
 
     if import_config is None:
