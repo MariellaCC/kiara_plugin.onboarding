@@ -29,7 +29,7 @@ class GetCommoncrawlIndexes(KiaraModule):
             "aws_access_key_id": {"type": "string", "doc": "The AWS access key id."},
             "aws_secret_access_key": {"type": "string", "doc": "The AWS secret access key."},
             "aws_s3_bucket": {"type": "string", "doc": "Name of S3 bucket to store results."},
-            "dbb_name": {"type": "string", "doc": "Name of the database to create."},
+            "db_name": {"type": "string", "doc": "Name of the database to create."},
             "table_name": {"type": "string", "doc": "Name of the table to create."},
         }
 
@@ -46,13 +46,16 @@ class GetCommoncrawlIndexes(KiaraModule):
 
     def process(self, inputs: ValueMap, outputs: ValueMap):
 
+        #TODO test query with result limitation, before running the query
+        # check query status before retrieving result
+
         import boto3
 
         user_query = inputs.get_value_data("query")
         aws_access_key_id = inputs.get_value_data("aws_access_key_id")
         aws_secret_access_key = inputs.get_value_data("aws_secret_access_key")
         aws_s3_bucket = inputs.get_value_data("aws_s3_bucket")
-        dbb_name = inputs.get_value_data("dbb_name")
+        dbb_name = inputs.get_value_data("db_name")
         table_name = inputs.get_value_data("table_name")
         table_name = inputs.get_value_data("table_name")
 
@@ -63,7 +66,7 @@ class GetCommoncrawlIndexes(KiaraModule):
         try:
             client = boto3.client('athena', region_name=region_name, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
         except Exception as e:
-            return f"Error setting-up AWS/Athena client: {e}"
+            print(f"Error setting-up AWS/Athena client: {e}")
 
         # query to create table with columns needed for commoncrawl info retrieval as per tutorial: https://commoncrawl.org/2018/03/index-to-warc-files-and-urls-in-columnar-format/
         table_creation_q = f"""
@@ -82,7 +85,7 @@ class GetCommoncrawlIndexes(KiaraModule):
             QueryString=f'CREATE DATABASE {dbb_name}',
             ResultConfiguration={'OutputLocation': aws_s3_bucket})
         except Exception as e:
-            return f"Error creating database on S3 bucket: {e}"
+            print(f"Error creating database on S3 bucket: {e}")
 
         # create table for database
         try:
@@ -90,27 +93,29 @@ class GetCommoncrawlIndexes(KiaraModule):
             QueryString=table_creation_q,
             ResultConfiguration={'OutputLocation': aws_s3_bucket})
         except Exception as e:
-            return f"Error creating table: {e}"
+            print(f"Error creating table: {e}")
         
         try:
             client.start_query_execution(
             QueryString=table_repair_q,
             ResultConfiguration={'OutputLocation': aws_s3_bucket})
         except Exception as e:
-            return f"Error setting-up database: {e}"
+            print(f"Error setting-up database: {e}")
         
         try:
             query_exec = client.start_query_execution(
             QueryString=user_query,
             ResultConfiguration={'OutputLocation': aws_s3_bucket})
         except Exception as e:
-            return f"Error executing query: {e}"
+            print(f"Error executing query: {e}")
         
         query_id = query_exec['QueryExecutionId']
+        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/athena/client/get_query_execution.html
+        # test if query is still running
 
         try:
             response = client.get_query_results(QueryExecutionId=query_id)
         except Exception as e:
-            return f"Error returning query results: {e}"
+            print(f"Error returning query results: {e}")
         
         outputs.set_value("cc_indexes", response)
