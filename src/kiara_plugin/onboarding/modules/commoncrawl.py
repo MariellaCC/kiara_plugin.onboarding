@@ -154,7 +154,7 @@ class GetCcQueryStatus(KiaraModule):
 
         import boto3
 
-        query_id = inputs.get_value_data("cc_query_id")
+        cc_query_id = inputs.get_value_data("cc_query_id")
         aws_access_key_id = inputs.get_value_data("aws_access_key_id")
         aws_secret_access_key = inputs.get_value_data("aws_secret_access_key")
 
@@ -169,8 +169,61 @@ class GetCcQueryStatus(KiaraModule):
 
         # get query status
         try:
-            response = client.get_query_execution(QueryExecutionId=query_id)
+            response = client.get_query_execution(QueryExecutionId=cc_query_id)
         except Exception as e:
             print(f"Error returning query execution: {e}")
         
         outputs.set_value("cc_query_status", response)
+
+
+class GetCcQueryResult(KiaraModule):
+    """Get the result of a Common Crawl archives indexes query.
+    """
+
+    _module_type_name = "onboard.get_cc_query_result"
+
+    def create_inputs_schema(
+        self,
+    ) -> ValueMapSchema:
+
+        return {
+            "cc_query_id": {"type": "string", "doc": "AWS/Athena query id."},
+            "aws_access_key_id": {"type": "string", "doc": "The AWS access key id."},
+            "aws_secret_access_key": {"type": "string", "doc": "The AWS secret access key."},
+        }
+
+    def create_outputs_schema(
+        self,
+    ) -> ValueMapSchema:
+
+        return {
+            "cc_query_result": {
+                "type": "dict",
+            }
+        }
+
+
+    def process(self, inputs: ValueMap, outputs: ValueMap):
+
+        import boto3
+
+        cc_query_id = inputs.get_value_data("cc_query_id")
+        aws_access_key_id = inputs.get_value_data("aws_access_key_id")
+        aws_secret_access_key = inputs.get_value_data("aws_secret_access_key")
+
+        # AWS region (must be us-east-1 for commoncrawl usage)
+        region_name = 'us-east-1'
+
+        # set up Athena with AWS credentials
+        try:
+            client = boto3.client('athena', region_name=region_name, aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
+        except Exception as e:
+            print(f"Error setting-up AWS/Athena client: {e}")
+
+        # get query status
+        try:
+            response = client.get_query_results(QueryExecutionId=cc_query_id)
+        except Exception as e:
+            print(f"Error returning query execution: {e}")
+        
+        outputs.set_value("cc_query_result", response)
