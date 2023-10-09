@@ -259,7 +259,6 @@ class GetCcPages(KiaraModule):
 
         import httpx
         import gzip
-        import io
         import pyarrow as pa
 
         cc_query_result = inputs.get_value_data("cc_query_result")
@@ -284,10 +283,12 @@ class GetCcPages(KiaraModule):
 
                 warc_filenames.append(warc_filename)
 
+                full_url =f"{cc_url}{warc_filename}"
+
                 try:
                     # Send the HTTP request
                     with httpx.Client() as client:
-                        r = client.get(warc_filename, headers=headers)
+                        r = client.get(full_url, headers=headers)
 
                         # Decompress the gzipped data
                         decompressed_data = gzip.decompress(r.content)
