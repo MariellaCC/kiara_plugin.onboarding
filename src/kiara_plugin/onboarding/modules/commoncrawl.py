@@ -259,9 +259,10 @@ class GetCcPages(KiaraModule):
 
         import httpx
         import gzip
-        # import pyarrow as pa
+        import json 
 
         cc_query_result = inputs.get_value_data("cc_query_result")
+
 
         cc_url = 'https://data.commoncrawl.org/'
 
@@ -270,42 +271,44 @@ class GetCcPages(KiaraModule):
         status = []
         
 
-        for row in cc_query_result['ResultSet']['Rows']:
+        for index, row in enumerate(cc_query_result['ResultSet']['Rows']):
+            
             for key, value in row.items():
+
+                # first row contains names and needs to be discarded
+                if index > 0:
                 
-                warc_filename = value[23]
-                warc_record_offset = value[24]
-                warc_record_length = value[25]
+                    # 23, 24 and 25 are the indexes for the fields filename, record offset and record length
+                    
+                    warc_filename = value[23]['VarCharValue']
+                    warc_record_offset = int(value[24]['VarCharValue'])
+                    warc_record_length = int(value[25]['VarCharValue'])
 
-                start = warc_record_offset
-                end = start + warc_record_length - 1
-                headers = {"Range": f"bytes={start}-{end}"}
+                    start = warc_record_offset
+                    end = start + warc_record_length - 1
+                    headers = {"Range": f"bytes={start}-{end}"}
 
-                warc_filenames.append(warc_filename)
+                    warc_filenames.append(warc_filename)
 
-                full_url =f"{cc_url}{warc_filename}"
+                    full_url =f"{cc_url}{warc_filename}"
 
-                try:
-                    # Send the HTTP request
-                    with httpx.Client() as client:
-                        r = client.get(full_url, headers=headers)
+                    try:
+                        # Send the HTTP request
+                        with httpx.Client() as client:
+                            r = client.get(full_url, headers=headers)
 
-                        # Decompress the gzipped data
-                        decompressed_data = gzip.decompress(r.content)
-                        web_pages.append(decompressed_data)
-                        status.append('success')
+                            # Decompress the gzipped data
+                            decompressed_data = gzip.decompress(r.content)
+                 
+                            # web_pages.append(orjson.dumps(decompressed_data))
+                            web_pages.append(decompressed_data.decode("utf-8"))
+                            status.append('success')
                 
-                except Exception as e:
+                    except Exception as e:
 
-                    status.append(e)
+                        status.append(e)
             
 
-        # cc_filename = pa.array(warc_filenames)
-        # web_page = pa.array(web_pages)
-        # get_status = pa.array(status)
-        # cols = ['cc_filename', 'web_page', 'status']
-        # res = pa.table([cc_filename, web_page, get_status], names=cols)
-
-        res = {"cc_filename": warc_filename, "web_page": web_pages, "status": status}
+        res = {"cc_filename": warc_filenames, "web_page": web_pages, "status": status}
         
-        outputs.set_value("cc_query_pages", res)
+        outputs.set_value("cc_query_pages", json.dumps(res))
