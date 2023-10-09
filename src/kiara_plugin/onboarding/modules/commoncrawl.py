@@ -250,7 +250,7 @@ class GetCcPages(KiaraModule):
 
         return {
             "cc_query_pages": {
-                "type": "table",
+                "type": "dict",
             }
         }
 
@@ -259,7 +259,7 @@ class GetCcPages(KiaraModule):
 
         import httpx
         import gzip
-        import pyarrow as pa
+        # import pyarrow as pa
 
         cc_query_result = inputs.get_value_data("cc_query_result")
 
@@ -300,10 +300,12 @@ class GetCcPages(KiaraModule):
                     status.append(e)
             
 
-        cc_filename = pa.array(warc_filenames)
-        web_page = pa.array(web_pages)
-        get_status = pa.array(status)
-        cols = ['cc_filename', 'web_page', 'status']
-        res = pa.table([cc_filename, web_page, get_status], names=cols)
+        # cc_filename = pa.array(warc_filenames)
+        # web_page = pa.array(web_pages)
+        # get_status = pa.array(status)
+        # cols = ['cc_filename', 'web_page', 'status']
+        # res = pa.table([cc_filename, web_page, get_status], names=cols)
+
+        res = {"cc_filename": warc_filename, "web_page": web_pages, "status": status}
         
         outputs.set_value("cc_query_pages", res)
