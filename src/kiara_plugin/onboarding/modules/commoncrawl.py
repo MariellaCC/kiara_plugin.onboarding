@@ -227,3 +227,82 @@ class GetCcQueryResult(KiaraModule):
             print(f"Error returning query execution: {e}")
         
         outputs.set_value("cc_query_result", response)
+
+
+# Reprendre ici
+class GetCcPages(KiaraModule):
+    """Get the result of a Common Crawl archives indexes query.
+    """
+
+    _module_type_name = "onboard.get_cc_pages"
+
+    def create_inputs_schema(
+        self,
+    ) -> ValueMapSchema:
+
+        return {
+            "cc_query_result": {"type": "dict", "doc": "Commoncrewl archive indexes obtained via an AWS/Athena query."},
+        }
+
+    def create_outputs_schema(
+        self,
+    ) -> ValueMapSchema:
+
+        return {
+            "cc_query_pages": {
+                "type": "table",
+            }
+        }
+
+
+    def process(self, inputs: ValueMap, outputs: ValueMap):
+
+        import httpx
+        import gzip
+        import io
+        import pyarrow as pa
+
+        cc_query_result = inputs.get_value_data("cc_query_result")
+
+        cc_url = 'https://data.commoncrawl.org/'
+
+        warc_filenames = []
+        web_pages = []
+        status = []
+        
+
+        for row in cc_query_result['ResultSet']['Rows']:
+            for key, value in row.items():
+                
+                warc_filename = value[23]
+                warc_record_offset = value[24]
+                warc_record_length = value[25]
+
+                start = warc_record_offset
+                end = start + warc_record_length - 1
+                headers = {"Range": f"bytes={start}-{end}"}
+
+                warc_filenames.append(warc_filename)
+
+                try:
+                    # Send the HTTP request
+                    with httpx.Client() as client:
+                        r = client.get(warc_filename, headers=headers)
+
+                        # Decompress the gzipped data
+                        decompressed_data = gzip.decompress(r.content)
+                        web_pages.append(decompressed_data)
+                        status.append('success')
+                
+                except Exception as e:
+
+                    status.append(e)
+            
+
+        cc_filename = pa.array(warc_filenames)
+        web_page = pa.array(web_pages)
+        get_status = pa.array(status)
+        cols = ['cc_filename', 'web_page', 'status']
+        res = pa.table([cc_filename, web_page, get_status], names=cols)
+        
+        outputs.set_value("cc_query_pages", res)
