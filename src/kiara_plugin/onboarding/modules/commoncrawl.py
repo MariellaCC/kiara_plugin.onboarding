@@ -13,7 +13,7 @@ from kiara.models.filesystem import KiaraFileBundle
 
 
 class RunCcQuery(KiaraModule):
-    """Execute a Common Crawl archives indexes for a given query performed via Amazon Web Services (AWS) and Athena.
+    """Execute a Common Crawl indexes query via Amazon Web Services (AWS) and Athena.
     This process requires an AWS account and an S3 bucket. It may trigger some fees billed by AWS.
     Additional information on the process followed available at: https://commoncrawl.org/2018/03/index-to-warc-files-and-urls-in-columnar-format/.
     """
@@ -46,8 +46,6 @@ class RunCcQuery(KiaraModule):
 
     def process(self, inputs: ValueMap, outputs: ValueMap):
 
-        #TODO test query with result limitation, before running the query
-        # check query status before retrieving result
 
         import boto3
 
@@ -124,7 +122,7 @@ class RunCcQuery(KiaraModule):
 
 
 class GetCcQueryStatus(KiaraModule):
-    """Get the status of a Common Crawl archives indexes query.
+    """Get the status of a Common Crawl indexes query.
     """
 
     _module_type_name = "onboard.get_cc_query_status"
@@ -177,7 +175,7 @@ class GetCcQueryStatus(KiaraModule):
 
 
 class GetCcQueryResult(KiaraModule):
-    """Get the result of a Common Crawl archives indexes query.
+    """Get the result of a Common Crawl documents indexes query.
     """
 
     _module_type_name = "onboard.get_cc_query_result"
@@ -229,9 +227,8 @@ class GetCcQueryResult(KiaraModule):
         outputs.set_value("cc_query_result", response)
 
 
-# Reprendre ici
 class GetCcPages(KiaraModule):
-    """Get the result of a Common Crawl archives indexes query.
+    """Get the web pages from common crawl indexes.
     """
 
     _module_type_name = "onboard.get_cc_pages"
@@ -241,7 +238,7 @@ class GetCcPages(KiaraModule):
     ) -> ValueMapSchema:
 
         return {
-            "cc_query_result": {"type": "dict", "doc": "Commoncrewl archive indexes obtained via an AWS/Athena query."},
+            "cc_query_result": {"type": "dict", "doc": "Web pages retrieved from commoncrawl."},
         }
 
     def create_outputs_schema(
