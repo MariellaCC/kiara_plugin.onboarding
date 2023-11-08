@@ -303,7 +303,9 @@ class GetCcPages(KiaraModule):
                 
                     except Exception as e:
 
-                        status.append(e)
+                        web_pages.append(None) 
+
+                        status.append(str(e))
             
 
         res = {"cc_filename": warc_filenames, "web_page": web_pages, "status": status}
